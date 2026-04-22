@@ -1,23 +1,15 @@
 const axios = require('axios');
 
 export default async function handler(req, res) {
-    // Estas 3 linhas são vitais para o Blogger não bloquear
-    res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
-
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
-
+    
     try {
-        const urlVerdadeira = "https://popcdn.day/player.php?stream=TVI";
-        const response = await axios.get(urlVerdadeira, {
+        // 1. Vamos buscar o código ao gerador de tokens
+        const response = await axios.get("https://popcdn.day/player.php?stream=TVI", {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://freeshot.live/'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://freeshot.live/',
+                'Origin': 'https://freeshot.live'
             }
         });
 
@@ -26,14 +18,13 @@ export default async function handler(req, res) {
 
         if (tokenMatch && tokenMatch[1]) {
             const token = tokenMatch[1];
-            const m3u8Url = `https://clouding.wideiptv.top/TVI/tracks-v1/index.fmp4.m3u8?token=${token}`;
-            
-            // Em vez de redirecionar, vamos enviar o link como TEXTO para o player ler com calma
-            res.status(200).send(m3u8Url);
+            // Construímos o link final que o teu player vai usar
+            const streamUrl = `https://clouding.wideiptv.top/TVI/tracks-v1/index.fmp4.m3u8?token=${token}`;
+            res.status(200).send(streamUrl);
         } else {
-            res.status(404).send("Token não encontrado");
+            res.status(404).send("Token nao encontrado no HTML");
         }
     } catch (error) {
-        res.status(500).send("Erro no servidor");
+        res.status(500).send("Erro ao conectar ao servidor de video");
     }
 }
