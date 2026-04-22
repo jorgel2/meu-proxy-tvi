@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'GET');
 
     try {
-        const response = await axios.get('https://freeshot.live/embed/TVI.php', {
+        const response = await axios.get('https://popcdn.day/player.php?stream=TVI', {
             // Estes cabeçalhos dizem ao servidor: "Eu já estou aqui dentro, não me expulses!"
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
