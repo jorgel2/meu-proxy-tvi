@@ -1,36 +1,43 @@
 const axios = require('axios');
 
 export default async function handler(req, res) {
-    // Configura os cabeçalhos para evitar bloqueios de CORS no teu blog
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
 
     try {
-        // 1. Aceder ao link que contém o iframe do player
-        // Usamos um User-Agent para o site pensar que somos um browser real
         const response = await axios.get('https://freeshot.live/embed/TVI.php', {
+            // Estes cabeçalhos dizem ao servidor: "Eu já estou aqui dentro, não me expulses!"
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://freeshot.live/', 
+                'Origin': 'https://freeshot.live',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'pt-PT,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            },
+            maxRedirects: 0, // Impede que o Axios siga o redirecionamento para a home
+            validateStatus: (status) => status >= 200 && status < 400 
         });
 
         const html = response.data;
 
-        // 2. Procurar o token no código HTML
-        // O regex procura por algo como token=abc123...
+        // Se o código fonte vier no 'view-source', este regex vai apanhá-lo:
         const tokenMatch = html.match(/token=([a-zA-Z0-9-]*)/);
 
         if (tokenMatch && tokenMatch[1]) {
             const token = tokenMatch[1];
-            // Montamos o link final m3u8 que tu descobriste
             const m3u8Url = `https://clouding.wideiptv.top/TVI/tracks-v1/index.fmp4.m3u8?token=${token}`;
             
-            // 3. Redirecionar para o link do vídeo
+            // Em vez de redirecionar (que pode dar erro de CORS), vamos devolver o link como texto
+            // ou redirecionar. Vamos tentar o redirecionamento primeiro:
             res.redirect(m3u8Url);
         } else {
-            res.status(404).json({ error: "Token não encontrado no código fonte" });
+            // Se ainda assim não der, vamos ver o que o servidor enviou de facto
+            res.status(200).send("O servidor redirecionou ou o token mudou de lugar. HTML recebido: " + html.substring(0, 200));
         }
     } catch (error) {
-        res.status(500).json({ error: "Erro ao conectar ao servidor de origem" });
+        // Se houver erro de redirecionamento (302), tentamos apanhar o que resta
+        res.status(500).json({ error: "O site bloqueou o servidor do Vercel", detalhes: error.message });
     }
 }
